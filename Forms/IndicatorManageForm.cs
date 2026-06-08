@@ -71,6 +71,7 @@ namespace DataApiServiceForm
 
         private void ApplyFilter()
         {
+            if (_allIndicators == null) return;
             var filtered = _allIndicators.AsEnumerable();
 
             // Filter by category
