@@ -50,7 +50,7 @@ namespace DataApiServiceForm
                 // Update UI to "running" state
                 txtConnectionString.Enabled = false;
                 nudPort.Enabled = false;
-                btnStartStop.Text = "Stop";
+                btnStartStop.Text = "停止服务";
             }
             catch (Exception ex)
             {
@@ -71,7 +71,7 @@ namespace DataApiServiceForm
                 // Update UI to "stopped" state
                 txtConnectionString.Enabled = true;
                 nudPort.Enabled = true;
-                btnStartStop.Text = "Start";
+                btnStartStop.Text = "启动服务";
             }
         }
 
