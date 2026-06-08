@@ -163,7 +163,7 @@ namespace DataApiServiceForm.Services
                 if (indicator.IndicatorId == 0)
                 {
                     var sql = @"INSERT INTO INDICATOR_DEF (INDICATOR_ID, INDICATOR_CODE, INDICATOR_NAME, CATEGORY_ID, QUERY_SQL, PARAM_DEF, DESCRIPTION, DATA_TYPE, UNIT, STATUS, VERSION, CREATE_TIME, CREATE_USER)
-                                VALUES (SEQ_INDICATOR_DEF.NEXTVAL, :code, :name, :catId, :querySql, :paramDef, :desc, :dataType, :unit, :status, 1, SYSDATE, :createUser)";
+                                VALUES (SEQ_INDICATOR_DEF.NEXTVAL, :code, :name, :catId, :querySql, :paramDef, :descr, :dataType, :unit, :status, 1, SYSDATE, :createUser)";
                     using (var cmd = new OracleCommand(sql, conn))
                     {
                         cmd.Parameters.Add("code", indicator.IndicatorCode);
@@ -171,7 +171,7 @@ namespace DataApiServiceForm.Services
                         cmd.Parameters.Add("catId", (object)indicator.CategoryId ?? DBNull.Value);
                         cmd.Parameters.Add("querySql", (object)indicator.QuerySql ?? DBNull.Value);
                         cmd.Parameters.Add("paramDef", (object)indicator.ParamDef ?? DBNull.Value);
-                        cmd.Parameters.Add("desc", (object)indicator.Description ?? DBNull.Value);
+                        cmd.Parameters.Add("descr", (object)indicator.Description ?? DBNull.Value);
                         cmd.Parameters.Add("dataType", indicator.DataType);
                         cmd.Parameters.Add("unit", (object)indicator.Unit ?? DBNull.Value);
                         cmd.Parameters.Add("status", indicator.Status);
@@ -181,7 +181,7 @@ namespace DataApiServiceForm.Services
                 }
                 else
                 {
-                    var sql = @"UPDATE INDICATOR_DEF SET INDICATOR_CODE=:code, INDICATOR_NAME=:name, CATEGORY_ID=:catId, QUERY_SQL=:querySql, PARAM_DEF=:paramDef, DESCRIPTION=:desc, DATA_TYPE=:dataType, UNIT=:unit, STATUS=:status, VERSION=VERSION+1, UPDATE_TIME=SYSDATE, UPDATE_USER=:updateUser WHERE INDICATOR_ID=:id";
+                    var sql = @"UPDATE INDICATOR_DEF SET INDICATOR_CODE=:code, INDICATOR_NAME=:name, CATEGORY_ID=:catId, QUERY_SQL=:querySql, PARAM_DEF=:paramDef, DESCRIPTION=:descr, DATA_TYPE=:dataType, UNIT=:unit, STATUS=:status, VERSION=VERSION+1, UPDATE_TIME=SYSDATE, UPDATE_USER=:updateUser WHERE INDICATOR_ID=:id";
                     using (var cmd = new OracleCommand(sql, conn))
                     {
                         cmd.Parameters.Add("code", indicator.IndicatorCode);
@@ -189,7 +189,7 @@ namespace DataApiServiceForm.Services
                         cmd.Parameters.Add("catId", (object)indicator.CategoryId ?? DBNull.Value);
                         cmd.Parameters.Add("querySql", (object)indicator.QuerySql ?? DBNull.Value);
                         cmd.Parameters.Add("paramDef", (object)indicator.ParamDef ?? DBNull.Value);
-                        cmd.Parameters.Add("desc", (object)indicator.Description ?? DBNull.Value);
+                        cmd.Parameters.Add("descr", (object)indicator.Description ?? DBNull.Value);
                         cmd.Parameters.Add("dataType", indicator.DataType);
                         cmd.Parameters.Add("unit", (object)indicator.Unit ?? DBNull.Value);
                         cmd.Parameters.Add("status", indicator.Status);
