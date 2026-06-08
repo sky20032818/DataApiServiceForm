@@ -67,7 +67,7 @@ namespace DataApiServiceForm
             this.txtConnectionString.Name = "txtConnectionString";
             this.txtConnectionString.Size = new System.Drawing.Size(760, 20);
             this.txtConnectionString.TabIndex = 1;
-            this.txtConnectionString.Text = "User Id=username;Password=password;Data Source=//host:port/service_name";
+            this.txtConnectionString.Text = string.Empty;
             //
             // lblPort
             //

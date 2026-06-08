@@ -105,8 +105,8 @@ namespace DataApiServiceForm
 
             // panelRight
             this.splitContainer1.Panel2.Controls.Add(this.panelRight);
-            this.panelRight.Controls.Add(this.panelFilter);
             this.panelRight.Controls.Add(this.dgvIndicators);
+            this.panelRight.Controls.Add(this.panelFilter);
             this.panelRight.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelRight.Location = new System.Drawing.Point(0, 0);
             this.panelRight.Name = "panelRight";
@@ -181,13 +181,11 @@ namespace DataApiServiceForm
                 this.colCode, this.colName, this.colCategory, this.colDataType, this.colStatus, this.colEdit, this.colDelete});
             this.dgvIndicators.Dock = System.Windows.Forms.DockStyle.Fill;
             this.dgvIndicators.EnableHeadersVisualStyles = false;
-            this.dgvIndicators.Location = new System.Drawing.Point(0, 42);
             this.dgvIndicators.Name = "dgvIndicators";
             this.dgvIndicators.ReadOnly = true;
             this.dgvIndicators.RowHeadersVisible = false;
             this.dgvIndicators.RowTemplate.Height = 28;
             this.dgvIndicators.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.dgvIndicators.Size = new System.Drawing.Size(816, 526);
             this.dgvIndicators.TabIndex = 1;
             this.dgvIndicators.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.dgvIndicators_CellContentClick);
 

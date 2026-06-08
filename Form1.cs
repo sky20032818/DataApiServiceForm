@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Forms;
+using DataApiServiceForm.Properties;
 using DataApiServiceForm.Services;
 
 namespace DataApiServiceForm
@@ -11,6 +12,20 @@ namespace DataApiServiceForm
         public Form1()
         {
             InitializeComponent();
+            LoadSettings();
+        }
+
+        private void LoadSettings()
+        {
+            txtConnectionString.Text = Settings.Default.ConnectionString;
+            nudPort.Value = Settings.Default.ApiPort;
+        }
+
+        private void SaveSettings()
+        {
+            Settings.Default.ConnectionString = txtConnectionString.Text;
+            Settings.Default.ApiPort = (int)nudPort.Value;
+            Settings.Default.Save();
         }
 
         private void btnStartStop_Click(object sender, EventArgs e)
@@ -47,6 +62,8 @@ namespace DataApiServiceForm
 
                 _server.Start();
 
+                SaveSettings();
+
                 // Update UI to "running" state
                 txtConnectionString.Enabled = false;
                 nudPort.Enabled = false;
@@ -77,6 +94,7 @@ namespace DataApiServiceForm
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            SaveSettings();
             if (_server != null && _server.IsRunning)
             {
                 _server.Stop();

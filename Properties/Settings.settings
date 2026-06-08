@@ -1,7 +1,14 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)">
   <Profiles>
     <Profile Name="(Default)" />
   </Profiles>
-  <Settings />
+  <Settings>
+    <Setting Name="ConnectionString" Type="(System.String)" Scope="User">
+      <Value Profile="(Default)">User Id=username;Password=password;Data Source=//host:port/service_name</Value>
+    </Setting>
+    <Setting Name="ApiPort" Type="(System.Int32)" Scope="User">
+      <Value Profile="(Default)">8080</Value>
+    </Setting>
+  </Settings>
 </SettingsFile>
