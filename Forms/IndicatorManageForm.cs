@@ -13,12 +13,23 @@ namespace DataApiServiceForm
         private readonly IndicatorService _service;
         private List<IndicatorCategory> _categories;
         private List<IndicatorDef> _allIndicators;
-        private int _selectedCategoryId = -1; // -1 means all
+        private int _selectedCategoryId = -1;
 
         public IndicatorManageForm(Func<string> connectionStringProvider)
         {
             InitializeComponent();
             _service = new IndicatorService(connectionStringProvider);
+            SetupDataGridViewStyle();
+        }
+
+        private void SetupDataGridViewStyle()
+        {
+            dgvIndicators.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 248, 248);
+            dgvIndicators.DefaultCellStyle.SelectionBackColor = Color.FromArgb(51, 153, 255);
+            dgvIndicators.DefaultCellStyle.SelectionForeColor = Color.White;
+            dgvIndicators.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240);
+            dgvIndicators.ColumnHeadersDefaultCellStyle.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular);
+            dgvIndicators.DefaultCellStyle.Font = new Font("Microsoft YaHei UI", 9F);
         }
 
         protected override void OnLoad(EventArgs e)
@@ -46,7 +57,7 @@ namespace DataApiServiceForm
             _categories = _service.GetCategories();
             treeViewCategories.Nodes.Clear();
 
-            var allNode = treeViewCategories.Nodes.Add("全部指标");
+            var allNode = treeViewCategories.Nodes.Add("[ 全部指标 ]");
             allNode.Tag = -1;
 
             foreach (var cat in _categories)
@@ -56,7 +67,6 @@ namespace DataApiServiceForm
             }
 
             treeViewCategories.ExpandAll();
-            // Select "全部" by default
             if (treeViewCategories.Nodes.Count > 0)
             {
                 treeViewCategories.SelectedNode = treeViewCategories.Nodes[0];
@@ -74,24 +84,17 @@ namespace DataApiServiceForm
             if (_allIndicators == null) return;
             var filtered = _allIndicators.AsEnumerable();
 
-            // Filter by category
             if (_selectedCategoryId > 0)
             {
                 filtered = filtered.Where(i => i.CategoryId == _selectedCategoryId);
             }
 
-            // Filter by status
             var statusFilter = cmbStatusFilter.SelectedIndex;
-            if (statusFilter == 1) // 启用
-            {
+            if (statusFilter == 1)
                 filtered = filtered.Where(i => i.Status == "1");
-            }
-            else if (statusFilter == 2) // 禁用
-            {
+            else if (statusFilter == 2)
                 filtered = filtered.Where(i => i.Status == "0");
-            }
 
-            // Filter by search text
             var searchText = txtSearch.Text.Trim();
             if (!string.IsNullOrEmpty(searchText))
             {
@@ -100,7 +103,9 @@ namespace DataApiServiceForm
                     (i.IndicatorName != null && i.IndicatorName.IndexOf(searchText, StringComparison.OrdinalIgnoreCase) >= 0));
             }
 
-            BindIndicators(filtered.ToList());
+            var list = filtered.ToList();
+            BindIndicators(list);
+            lblCount.Text = string.Format("共 {0} 条指标", list.Count);
         }
 
         private void BindIndicators(List<IndicatorDef> indicators)
@@ -121,9 +126,9 @@ namespace DataApiServiceForm
 
         private void treeViewCategories_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            if (e.Node?.Tag is int catId)
+            if (e.Node != null && e.Node.Tag is int)
             {
-                _selectedCategoryId = catId;
+                _selectedCategoryId = (int)e.Node.Tag;
                 ApplyFilter();
             }
         }
@@ -136,6 +141,12 @@ namespace DataApiServiceForm
         private void btnSearch_Click(object sender, EventArgs e)
         {
             ApplyFilter();
+        }
+
+        private void txtSearch_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+                ApplyFilter();
         }
 
         private void btnRefresh_Click(object sender, EventArgs e)
@@ -183,13 +194,9 @@ namespace DataApiServiceForm
             if (indicator == null) return;
 
             if (e.ColumnIndex == colEdit.Index)
-            {
                 OpenIndicatorEdit(indicator);
-            }
             else if (e.ColumnIndex == colDelete.Index)
-            {
                 DeleteIndicator(indicator);
-            }
         }
 
         private void OpenIndicatorEdit(IndicatorDef indicator)
@@ -210,9 +217,7 @@ namespace DataApiServiceForm
                     entity.Status = dlg.Status ? "1" : "0";
                     entity.UpdateUser = Environment.UserName;
                     if (indicator == null)
-                    {
                         entity.CreateUser = Environment.UserName;
-                    }
 
                     try
                     {
@@ -252,14 +257,14 @@ namespace DataApiServiceForm
     /// </summary>
     public class CategoryEditForm : Form
     {
-        private System.Windows.Forms.Label lblCode;
-        private System.Windows.Forms.TextBox txtCode;
-        private System.Windows.Forms.Label lblName;
-        private System.Windows.Forms.TextBox txtName;
-        private System.Windows.Forms.Label lblSortOrder;
-        private System.Windows.Forms.NumericUpDown nudSortOrder;
-        private System.Windows.Forms.Button btnOk;
-        private System.Windows.Forms.Button btnCancel;
+        private Label lblCode;
+        private TextBox txtCode;
+        private Label lblName;
+        private TextBox txtName;
+        private Label lblSortOrder;
+        private NumericUpDown nudSortOrder;
+        private Button btnOk;
+        private Button btnCancel;
 
         public string CategoryCode { get { return txtCode.Text.Trim(); } }
         public string CategoryName { get { return txtName.Text.Trim(); } }
@@ -272,107 +277,74 @@ namespace DataApiServiceForm
 
         private void InitializeComponent()
         {
-            this.lblCode = new System.Windows.Forms.Label();
-            this.txtCode = new System.Windows.Forms.TextBox();
-            this.lblName = new System.Windows.Forms.Label();
-            this.txtName = new System.Windows.Forms.TextBox();
-            this.lblSortOrder = new System.Windows.Forms.Label();
-            this.nudSortOrder = new System.Windows.Forms.NumericUpDown();
-            this.btnOk = new System.Windows.Forms.Button();
-            this.btnCancel = new System.Windows.Forms.Button();
-            ((System.ComponentModel.ISupportInitialize)(this.nudSortOrder)).BeginInit();
-            this.SuspendLayout();
-
-            this.lblCode.AutoSize = true;
-            this.lblCode.Location = new System.Drawing.Point(12, 15);
-            this.lblCode.Text = "分类编码:";
-
-            this.txtCode.Location = new System.Drawing.Point(85, 12);
-            this.txtCode.Size = new System.Drawing.Size(250, 20);
-            this.txtCode.TabIndex = 0;
-
-            this.lblName.AutoSize = true;
-            this.lblName.Location = new System.Drawing.Point(12, 45);
-            this.lblName.Text = "分类名称:";
-
-            this.txtName.Location = new System.Drawing.Point(85, 42);
-            this.txtName.Size = new System.Drawing.Size(250, 20);
-            this.txtName.TabIndex = 1;
-
-            this.lblSortOrder.AutoSize = true;
-            this.lblSortOrder.Location = new System.Drawing.Point(12, 75);
-            this.lblSortOrder.Text = "排序号:";
-
-            this.nudSortOrder.Location = new System.Drawing.Point(85, 72);
-            this.nudSortOrder.Maximum = 9999;
-            this.nudSortOrder.Size = new System.Drawing.Size(80, 20);
-            this.nudSortOrder.TabIndex = 2;
-
-            this.btnOk.Location = new System.Drawing.Point(160, 110);
-            this.btnOk.Size = new System.Drawing.Size(80, 28);
-            this.btnOk.Text = "确定";
-            this.btnOk.UseVisualStyleBackColor = true;
-            this.btnOk.DialogResult = System.Windows.Forms.DialogResult.OK;
+            this.lblCode = new Label { AutoSize = true, Location = new Point(14, 18), Text = "分类编码:" };
+            this.txtCode = new TextBox { Location = new Point(85, 15), Size = new Size(280, 20) };
+            this.lblName = new Label { AutoSize = true, Location = new Point(14, 48), Text = "分类名称:" };
+            this.txtName = new TextBox { Location = new Point(85, 45), Size = new Size(280, 20) };
+            this.lblSortOrder = new Label { AutoSize = true, Location = new Point(14, 78), Text = "排序号:" };
+            this.nudSortOrder = new NumericUpDown
+            {
+                Location = new Point(85, 75),
+                Size = new Size(80, 20),
+                Maximum = 9999
+            };
+            this.btnOk = new Button
+            {
+                Text = "确定",
+                Location = new Point(185, 115),
+                Size = new Size(85, 28),
+                UseVisualStyleBackColor = true,
+                DialogResult = DialogResult.OK
+            };
             this.btnOk.Click += (s, e) =>
             {
                 if (string.IsNullOrWhiteSpace(txtCode.Text) || string.IsNullOrWhiteSpace(txtName.Text))
                 {
                     MessageBox.Show("分类编码和名称不能为空", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    this.DialogResult = System.Windows.Forms.DialogResult.None;
+                    this.DialogResult = DialogResult.None;
                 }
             };
+            this.btnCancel = new Button
+            {
+                Text = "取消",
+                Location = new Point(280, 115),
+                Size = new Size(85, 28),
+                DialogResult = DialogResult.Cancel
+            };
 
-            this.btnCancel.Location = new System.Drawing.Point(255, 110);
-            this.btnCancel.Size = new System.Drawing.Size(80, 28);
-            this.btnCancel.Text = "取消";
-            this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-
-            this.ClientSize = new System.Drawing.Size(350, 150);
-            this.Controls.Add(this.btnCancel);
-            this.Controls.Add(this.btnOk);
-            this.Controls.Add(this.nudSortOrder);
-            this.Controls.Add(this.lblSortOrder);
-            this.Controls.Add(this.txtName);
-            this.Controls.Add(this.lblName);
-            this.Controls.Add(this.txtCode);
-            this.Controls.Add(this.lblCode);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
+            this.ClientSize = new Size(380, 158);
+            this.Controls.AddRange(new Control[] { btnCancel, btnOk, nudSortOrder, lblSortOrder, txtName, lblName, txtCode, lblCode });
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+            this.StartPosition = FormStartPosition.CenterParent;
             this.Text = "新增分类";
-            this.AcceptButton = this.btnOk;
-            this.CancelButton = this.btnCancel;
-            ((System.ComponentModel.ISupportInitialize)(this.nudSortOrder)).EndInit();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            this.AcceptButton = btnOk;
+            this.CancelButton = btnCancel;
+            ((System.ComponentModel.ISupportInitialize)nudSortOrder).BeginInit();
         }
     }
 
     /// <summary>
-    /// 指标编辑弹窗
+    /// 指标编辑弹窗 - 使用 TabControl 组织字段
     /// </summary>
     public class IndicatorEditForm : Form
     {
-        private System.Windows.Forms.Label lblCode;
-        private System.Windows.Forms.TextBox txtCode;
-        private System.Windows.Forms.Label lblName;
-        private System.Windows.Forms.TextBox txtName;
-        private System.Windows.Forms.Label lblCategory;
-        private System.Windows.Forms.ComboBox cmbCategory;
-        private System.Windows.Forms.Label lblQuerySql;
-        private System.Windows.Forms.TextBox txtQuerySql;
-        private System.Windows.Forms.Label lblParamDef;
-        private System.Windows.Forms.TextBox txtParamDef;
-        private System.Windows.Forms.Label lblDescription;
-        private System.Windows.Forms.TextBox txtDescription;
-        private System.Windows.Forms.Label lblDataType;
-        private System.Windows.Forms.ComboBox cmbDataType;
-        private System.Windows.Forms.Label lblUnit;
-        private System.Windows.Forms.TextBox txtUnit;
-        private System.Windows.Forms.CheckBox chkStatus;
-        private System.Windows.Forms.Button btnOk;
-        private System.Windows.Forms.Button btnCancel;
+        private TabControl tabControl;
+        private TabPage tabBasic;
+        private TabPage tabSql;
+
+        // Basic info fields
+        private Label lblCode, lblName, lblCategory, lblDataType, lblUnit, lblDescription;
+        private TextBox txtCode, txtName, txtDescription, txtUnit;
+        private ComboBox cmbCategory, cmbDataType;
+        private CheckBox chkStatus;
+
+        // SQL fields
+        private Label lblQuerySql, lblParamDef;
+        private TextBox txtQuerySql, txtParamDef;
+
+        private Button btnOk, btnCancel;
 
         private readonly List<IndicatorCategory> _categories;
 
@@ -390,7 +362,7 @@ namespace DataApiServiceForm
         public string QuerySql { get { return txtQuerySql.Text.Trim(); } }
         public string ParamDef { get { return txtParamDef.Text.Trim(); } }
         public string Description { get { return txtDescription.Text.Trim(); } }
-        public string DataType { get { return cmbDataType.SelectedItem?.ToString() ?? "LIST"; } }
+        public string DataType { get { return cmbDataType.SelectedItem != null ? cmbDataType.SelectedItem.ToString() : "LIST"; } }
         public string Unit { get { return txtUnit.Text.Trim(); } }
         public bool Status { get { return chkStatus.Checked; } }
 
@@ -398,7 +370,7 @@ namespace DataApiServiceForm
         {
             _categories = categories;
             InitializeComponent();
-            PopulateCategories(existing?.CategoryId);
+            PopulateCategories(existing != null ? existing.CategoryId : (int?)null);
 
             if (existing != null)
             {
@@ -406,12 +378,12 @@ namespace DataApiServiceForm
                 txtCode.Text = existing.IndicatorCode;
                 txtCode.ReadOnly = true;
                 txtName.Text = existing.IndicatorName;
-                txtQuerySql.Text = existing.QuerySql ?? "";
-                txtParamDef.Text = existing.ParamDef ?? "";
                 txtDescription.Text = existing.Description ?? "";
                 txtUnit.Text = existing.Unit ?? "";
                 chkStatus.Checked = existing.Status == "1";
                 cmbDataType.SelectedItem = existing.DataType ?? "LIST";
+                txtQuerySql.Text = existing.QuerySql ?? "";
+                txtParamDef.Text = existing.ParamDef ?? "";
             }
         }
 
@@ -421,177 +393,154 @@ namespace DataApiServiceForm
             {
                 cmbCategory.Items.Add(cat);
                 if (selectedCategoryId.HasValue && cat.CategoryId == selectedCategoryId.Value)
-                {
                     cmbCategory.SelectedItem = cat;
-                }
             }
             if (cmbCategory.SelectedIndex < 0 && cmbCategory.Items.Count > 0)
-            {
                 cmbCategory.SelectedIndex = 0;
-            }
         }
 
         private void InitializeComponent()
         {
-            this.lblCode = new System.Windows.Forms.Label();
-            this.txtCode = new System.Windows.Forms.TextBox();
-            this.lblName = new System.Windows.Forms.Label();
-            this.txtName = new System.Windows.Forms.TextBox();
-            this.lblCategory = new System.Windows.Forms.Label();
-            this.cmbCategory = new System.Windows.Forms.ComboBox();
-            this.lblQuerySql = new System.Windows.Forms.Label();
-            this.txtQuerySql = new System.Windows.Forms.TextBox();
-            this.lblParamDef = new System.Windows.Forms.Label();
-            this.txtParamDef = new System.Windows.Forms.TextBox();
-            this.lblDescription = new System.Windows.Forms.Label();
-            this.txtDescription = new System.Windows.Forms.TextBox();
-            this.lblDataType = new System.Windows.Forms.Label();
-            this.cmbDataType = new System.Windows.Forms.ComboBox();
-            this.lblUnit = new System.Windows.Forms.Label();
-            this.txtUnit = new System.Windows.Forms.TextBox();
-            this.chkStatus = new System.Windows.Forms.CheckBox();
-            this.btnOk = new System.Windows.Forms.Button();
-            this.btnCancel = new System.Windows.Forms.Button();
-            this.SuspendLayout();
+            this.tabControl = new TabControl { Location = new Point(10, 8), Size = new Size(535, 400) };
+            this.tabBasic = new TabPage("基本信息");
+            this.tabSql = new TabPage("SQL 定义");
+            this.tabControl.TabPages.AddRange(new TabPage[] { tabBasic, tabSql });
 
-            int y = 10;
-            int labelX = 12;
-            int inputX = 80;
+            // ── Tab: 基本信息 ──
+            var fontBold = new Font(this.Font, FontStyle.Bold);
 
-            // Code
-            this.lblCode.AutoSize = true;
-            this.lblCode.Location = new System.Drawing.Point(labelX, y + 3);
-            this.lblCode.Text = "指标编码:";
-            this.txtCode.Location = new System.Drawing.Point(inputX, y);
-            this.txtCode.Size = new System.Drawing.Size(150, 20);
-            this.txtCode.TabIndex = 0;
+            int baseX = 15, baseY = 10, lineH = 32, lblW = 65, shortW = 170, longW = 480;
 
-            // DataType
-            this.lblDataType.AutoSize = true;
-            this.lblDataType.Location = new System.Drawing.Point(250, y + 3);
-            this.lblDataType.Text = "类型:";
-            this.cmbDataType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.lblCode = new Label { Text = "指标编码*", Location = new Point(baseX, baseY + 4), AutoSize = true };
+            this.txtCode = new TextBox { Location = new Point(baseX + lblW, baseY), Size = new Size(shortW, 21) };
+
+            this.lblDataType = new Label { Text = "类型", Location = new Point(baseX + lblW + shortW + 25, baseY + 4), AutoSize = true };
+            this.cmbDataType = new ComboBox
+            {
+                Location = new Point(baseX + lblW + shortW + 55, baseY - 1),
+                Size = new Size(75, 21),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
             this.cmbDataType.Items.AddRange(new object[] { "SINGLE", "LIST" });
-            this.cmbDataType.Location = new System.Drawing.Point(280, y);
-            this.cmbDataType.Size = new System.Drawing.Size(80, 21);
             this.cmbDataType.SelectedIndex = 1;
 
-            y += 30;
+            baseY += lineH;
 
-            // Name
-            this.lblName.AutoSize = true;
-            this.lblName.Location = new System.Drawing.Point(labelX, y + 3);
-            this.lblName.Text = "指标名称:";
-            this.txtName.Location = new System.Drawing.Point(inputX, y);
-            this.txtName.Size = new System.Drawing.Size(420, 20);
+            this.lblName = new Label { Text = "指标名称*", Location = new Point(baseX, baseY + 4), AutoSize = true };
+            this.txtName = new TextBox { Location = new Point(baseX + lblW, baseY), Size = new Size(shortW, 21) };
 
-            // Unit
-            this.lblUnit.AutoSize = true;
-            this.lblUnit.Location = new System.Drawing.Point(250, y + 3);
-            this.lblUnit.Text = "单位:";
-            this.txtUnit.Location = new System.Drawing.Point(280, y);
-            this.txtUnit.Size = new System.Drawing.Size(80, 20);
+            this.lblUnit = new Label { Text = "单位", Location = new Point(baseX + lblW + shortW + 25, baseY + 4), AutoSize = true };
+            this.txtUnit = new TextBox { Location = new Point(baseX + lblW + shortW + 55, baseY - 1), Size = new Size(75, 21) };
 
-            y += 30;
+            baseY += lineH;
 
-            // Category + Status
-            this.lblCategory.AutoSize = true;
-            this.lblCategory.Location = new System.Drawing.Point(labelX, y + 3);
-            this.lblCategory.Text = "所属分类:";
-            this.cmbCategory.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbCategory.Location = new System.Drawing.Point(inputX, y);
-            this.cmbCategory.Size = new System.Drawing.Size(200, 21);
+            this.lblCategory = new Label { Text = "所属分类", Location = new Point(baseX, baseY + 4), AutoSize = true };
+            this.cmbCategory = new ComboBox
+            {
+                Location = new Point(baseX + lblW, baseY),
+                Size = new Size(210, 21),
+                DropDownStyle = ComboBoxStyle.DropDownList
+            };
 
-            this.chkStatus.AutoSize = true;
-            this.chkStatus.Location = new System.Drawing.Point(300, y + 2);
-            this.chkStatus.Text = "启用";
-            this.chkStatus.Checked = true;
+            this.chkStatus = new CheckBox
+            {
+                Text = "启用",
+                Location = new Point(baseX + lblW + 220, baseY + 2),
+                AutoSize = true,
+                Checked = true
+            };
 
-            y += 30;
+            baseY += lineH;
 
-            // Description
-            this.lblDescription.AutoSize = true;
-            this.lblDescription.Location = new System.Drawing.Point(labelX, y + 3);
-            this.lblDescription.Text = "指标说明:";
-            this.txtDescription.Location = new System.Drawing.Point(inputX, y);
-            this.txtDescription.Size = new System.Drawing.Size(420, 20);
+            this.lblDescription = new Label { Text = "指标说明", Location = new Point(baseX, baseY + 4), AutoSize = true };
+            this.txtDescription = new TextBox { Location = new Point(baseX + lblW, baseY), Size = new Size(longW, 21) };
 
-            y += 30;
+            tabBasic.Controls.AddRange(new Control[] {
+                lblCode, txtCode, lblDataType, cmbDataType,
+                lblName, txtName, lblUnit, txtUnit,
+                lblCategory, cmbCategory, chkStatus,
+                lblDescription, txtDescription
+            });
 
-            // QuerySQL
-            this.lblQuerySql.AutoSize = true;
-            this.lblQuerySql.Location = new System.Drawing.Point(labelX, y + 3);
-            this.lblQuerySql.Text = "查询SQL:";
-            this.txtQuerySql.Location = new System.Drawing.Point(inputX, y);
-            this.txtQuerySql.Multiline = true;
-            this.txtQuerySql.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtQuerySql.Size = new System.Drawing.Size(420, 150);
-            this.txtQuerySql.Font = new System.Drawing.Font("Consolas", 9F);
-            this.txtQuerySql.WordWrap = false;
+            // ── Tab: SQL 定义 ──
+            var sqly = 8;
 
-            y += 160;
+            this.lblQuerySql = new Label { Text = "查询 SQL:", Location = new Point(10, sqly), AutoSize = true, Font = fontBold };
+            sqly += 20;
+            this.txtQuerySql = new TextBox
+            {
+                Location = new Point(10, sqly),
+                Size = new Size(505, 240),
+                Multiline = true,
+                ScrollBars = ScrollBars.Both,
+                Font = new Font("Consolas", 9.5F),
+                WordWrap = false
+            };
 
-            // ParamDef
-            this.lblParamDef.AutoSize = true;
-            this.lblParamDef.Location = new System.Drawing.Point(labelX, y + 3);
-            this.lblParamDef.Text = "参数定义:";
-            this.txtParamDef.Location = new System.Drawing.Point(inputX, y);
-            this.txtParamDef.Size = new System.Drawing.Size(420, 40);
-            this.txtParamDef.Multiline = true;
+            sqly += 248;
 
-            y += 55;
+            var lblHint = new Label
+            {
+                Text = "提示: 使用 #{参数名} 作为占位符，例如 #{startDate}",
+                Location = new Point(15, sqly),
+                AutoSize = true,
+                ForeColor = Color.Gray,
+                Font = new Font(this.Font, FontStyle.Italic)
+            };
 
-            // Buttons
-            this.btnOk.Location = new System.Drawing.Point(280, y);
-            this.btnOk.Size = new System.Drawing.Size(100, 30);
-            this.btnOk.Text = "确定";
-            this.btnOk.UseVisualStyleBackColor = true;
-            this.btnOk.DialogResult = System.Windows.Forms.DialogResult.OK;
+            sqly += 22;
+
+            this.lblParamDef = new Label { Text = "参数定义 (JSON):", Location = new Point(10, sqly), AutoSize = true };
+            sqly += 20;
+            this.txtParamDef = new TextBox
+            {
+                Location = new Point(10, sqly),
+                Size = new Size(505, 52),
+                Multiline = true,
+                Font = new Font("Consolas", 9F)
+            };
+
+            tabSql.Controls.AddRange(new Control[] {
+                lblQuerySql, txtQuerySql, lblHint, lblParamDef, txtParamDef
+            });
+
+            // ── Buttons ──
+            var btnY = 418;
+            this.btnOk = new Button
+            {
+                Text = "确定",
+                Location = new Point(330, btnY),
+                Size = new Size(100, 30),
+                UseVisualStyleBackColor = true,
+                DialogResult = DialogResult.OK
+            };
             this.btnOk.Click += (s, e) =>
             {
                 if (string.IsNullOrWhiteSpace(txtCode.Text) || string.IsNullOrWhiteSpace(txtName.Text))
                 {
                     MessageBox.Show("指标编码和名称不能为空", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    this.DialogResult = System.Windows.Forms.DialogResult.None;
+                    this.DialogResult = DialogResult.None;
                 }
             };
 
-            this.btnCancel.Location = new System.Drawing.Point(390, y);
-            this.btnCancel.Size = new System.Drawing.Size(100, 30);
-            this.btnCancel.Text = "取消";
-            this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
+            this.btnCancel = new Button
+            {
+                Text = "取消",
+                Location = new Point(440, btnY),
+                Size = new Size(100, 30),
+                DialogResult = DialogResult.Cancel
+            };
 
-            y += 40;
-
-            this.ClientSize = new System.Drawing.Size(520, y + 10);
-            this.Controls.Add(this.btnCancel);
-            this.Controls.Add(this.btnOk);
-            this.Controls.Add(this.chkStatus);
-            this.Controls.Add(this.cmbCategory);
-            this.Controls.Add(this.lblCategory);
-            this.Controls.Add(this.txtUnit);
-            this.Controls.Add(this.lblUnit);
-            this.Controls.Add(this.cmbDataType);
-            this.Controls.Add(this.lblDataType);
-            this.Controls.Add(this.txtDescription);
-            this.Controls.Add(this.lblDescription);
-            this.Controls.Add(this.txtParamDef);
-            this.Controls.Add(this.lblParamDef);
-            this.Controls.Add(this.txtQuerySql);
-            this.Controls.Add(this.lblQuerySql);
-            this.Controls.Add(this.txtName);
-            this.Controls.Add(this.lblName);
-            this.Controls.Add(this.txtCode);
-            this.Controls.Add(this.lblCode);
-            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
+            // ── Form ──
+            this.ClientSize = new Size(555, 460);
+            this.Controls.AddRange(new Control[] { tabControl, btnOk, btnCancel });
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
-            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
+            this.StartPosition = FormStartPosition.CenterParent;
             this.Text = "新增指标";
-            this.AcceptButton = this.btnOk;
-            this.CancelButton = this.btnCancel;
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            this.AcceptButton = btnOk;
+            this.CancelButton = btnCancel;
         }
     }
 }
