@@ -15,8 +15,9 @@ namespace DataApiServiceForm.Services
         private readonly int _port;
         private readonly Func<string> _connectionStringProvider;
         private readonly Action<string> _logCallback;
-        private readonly OracleQueryExecutor _executor;
         private readonly IndicatorService _indicatorService;
+        private readonly string _logFilePath;
+        private readonly object _logLock = new object();
 
         private HttpListener _listener;
         private CancellationTokenSource _cts;
@@ -32,8 +33,11 @@ namespace DataApiServiceForm.Services
             _port = port;
             _connectionStringProvider = connectionStringProvider;
             _logCallback = logCallback;
-            _executor = new OracleQueryExecutor();
             _indicatorService = new IndicatorService(_connectionStringProvider);
+
+            var logDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            Directory.CreateDirectory(logDir);
+            _logFilePath = Path.Combine(logDir, string.Format("api_{0:yyyyMMdd}.log", DateTime.Now));
         }
 
         public void Start()
@@ -134,13 +138,6 @@ namespace DataApiServiceForm.Services
 
                 var path = request.Url.AbsolutePath;
 
-                // Route: POST /api/query
-                if (path.Equals("/api/query", StringComparison.OrdinalIgnoreCase))
-                {
-                    HandleQuery(context);
-                    return;
-                }
-
                 // Route: GET /api/indicator/list
                 if (path.Equals("/api/indicator/list", StringComparison.OrdinalIgnoreCase) && request.HttpMethod == "GET")
                 {
@@ -180,17 +177,18 @@ namespace DataApiServiceForm.Services
                 }
 
                 // No route matched
-                SendJsonResponse(response, 404, QueryResponse.Fail("Not found"));
+                Log(string.Format("[{0} {1}] 404 - not found", request.HttpMethod, path));
+                SendIndicatorJsonResponse(response, 404, IndicatorResult.Fail("Not found"));
             }
             catch (Oracle.ManagedDataAccess.Client.OracleException ex)
             {
-                Log(string.Format("Oracle error: {0}", ex.Message));
-                SendJsonResponse(response, 500, QueryResponse.Fail(string.Format("Oracle error: {0}", ex.Message)));
+                Log(string.Format("[{0} {1}] Oracle error: {2}", request.HttpMethod, request.Url.AbsolutePath, ex.Message));
+                SendIndicatorJsonResponse(response, 500, IndicatorResult.Fail(string.Format("Oracle error: {0}", ex.Message)));
             }
             catch (Exception ex)
             {
-                Log(string.Format("Internal error: {0}", ex.Message));
-                SendJsonResponse(response, 500, QueryResponse.Fail(string.Format("Internal server error: {0}", ex.Message)));
+                Log(string.Format("[{0} {1}] Internal error: {2}", request.HttpMethod, request.Url.AbsolutePath, ex.Message));
+                SendIndicatorJsonResponse(response, 500, IndicatorResult.Fail(string.Format("Internal server error: {0}", ex.Message)));
             }
             finally
             {
@@ -198,64 +196,8 @@ namespace DataApiServiceForm.Services
             }
         }
 
-        private void HandleQuery(HttpListenerContext context)
-        {
-            var request = context.Request;
-            var response = context.Response;
-
-            if (request.HttpMethod != "POST")
-            {
-                SendJsonResponse(response, 405, QueryResponse.Fail("Method not allowed. Use POST"));
-                return;
-            }
-
-            // Read request body
-            string body;
-            var encoding = request.ContentEncoding ?? Encoding.UTF8;
-            using (var reader = new StreamReader(request.InputStream, encoding))
-            {
-                body = reader.ReadToEnd();
-            }
-
-            // Parse JSON
-            QueryRequest queryRequest;
-            try
-            {
-                queryRequest = JsonConvert.DeserializeObject<QueryRequest>(body);
-            }
-            catch (JsonException ex)
-            {
-                SendJsonResponse(response, 400, QueryResponse.Fail(string.Format("Invalid JSON: {0}", ex.Message)));
-                return;
-            }
-
-            // Validate sql field
-            if (queryRequest == null || string.IsNullOrWhiteSpace(queryRequest.Sql))
-            {
-                SendJsonResponse(response, 400, QueryResponse.Fail("Missing required field: sql"));
-                return;
-            }
-
-            // Get connection string
-            var connectionString = _connectionStringProvider();
-            if (string.IsNullOrWhiteSpace(connectionString))
-            {
-                SendJsonResponse(response, 500, QueryResponse.Fail("Connection string is not configured"));
-                return;
-            }
-
-            // Execute query
-            Log(string.Format("Executing query: {0}", Truncate(queryRequest.Sql, 200)));
-            List<string> columns;
-            var data = _executor.ExecuteQuery(connectionString, queryRequest.Sql, out columns);
-
-            Log(string.Format("Query completed: {0} row(s) returned", data.Count));
-            SendJsonResponse(response, 200, QueryResponse.Ok(data, columns));
-        }
-
         private void HandleIndicatorList(HttpListenerResponse response)
         {
-            Log("GET /api/indicator/list");
             var indicators = _indicatorService.GetAllIndicators();
 
             var data = new List<Dictionary<string, object>>();
@@ -272,16 +214,17 @@ namespace DataApiServiceForm.Services
                 });
             }
 
+            Log(string.Format("[GET /api/indicator/list] OK - {0} indicators", data.Count));
             SendIndicatorJsonResponse(response, 200, IndicatorResult.Ok(data));
         }
 
         private void HandleIndicatorGet(HttpListenerResponse response, string code)
         {
-            Log(string.Format("GET /api/indicator/{0}", code));
             var indicator = _indicatorService.GetIndicatorByCode(code);
 
             if (indicator == null)
             {
+                Log(string.Format("[GET /api/indicator/{0}] 404 - not found", code));
                 SendIndicatorJsonResponse(response, 404, IndicatorResult.Fail(string.Format("Indicator not found: {0}", code)));
                 return;
             }
@@ -299,13 +242,12 @@ namespace DataApiServiceForm.Services
                 { "status", indicator.Status }
             };
 
+            Log(string.Format("[GET /api/indicator/{0}] OK", code));
             SendIndicatorJsonResponse(response, 200, IndicatorResult.Ok(data));
         }
 
         private void HandleIndicatorExecute(HttpListenerContext context, string code)
         {
-            Log(string.Format("POST /api/indicator/{0}/execute", code));
-
             // Read request body to get parameters
             string body;
             var encoding = context.Request.ContentEncoding ?? Encoding.UTF8;
@@ -338,20 +280,18 @@ namespace DataApiServiceForm.Services
 
             var result = _indicatorService.ExecuteIndicator(code, parameters);
             var statusCode = result.Success ? 200 : (result.Error != null && result.Error.Contains("not found") ? 404 : 500);
+
+            if (result.Success)
+            {
+                Log(string.Format("[POST /api/indicator/{0}/execute] OK - {1} rows, type={2}",
+                    code, result.RowCount ?? 0, result.DataType));
+            }
+            else
+            {
+                Log(string.Format("[POST /api/indicator/{0}/execute] FAIL - {1}", code, result.Error));
+            }
+
             SendIndicatorJsonResponse(context.Response, statusCode, result);
-        }
-
-        private void SendJsonResponse(HttpListenerResponse response, int statusCode, QueryResponse body)
-        {
-            response.StatusCode = statusCode;
-            response.ContentType = "application/json; charset=utf-8";
-
-            var json = JsonConvert.SerializeObject(body);
-            var buffer = Encoding.UTF8.GetBytes(json);
-
-            response.ContentLength64 = buffer.Length;
-            response.OutputStream.Write(buffer, 0, buffer.Length);
-            response.Close();
         }
 
         private void SendIndicatorJsonResponse(HttpListenerResponse response, int statusCode, IndicatorResult body)
@@ -373,13 +313,17 @@ namespace DataApiServiceForm.Services
             {
                 _logCallback(message);
             }
-        }
 
-        private static string Truncate(string value, int maxLength)
-        {
-            if (string.IsNullOrEmpty(value) || value.Length <= maxLength)
-                return value;
-            return value.Substring(0, maxLength) + "...";
+            try
+            {
+                var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                var line = string.Format("[{0}] {1}", timestamp, message);
+                lock (_logLock)
+                {
+                    File.AppendAllText(_logFilePath, line + Environment.NewLine);
+                }
+            }
+            catch { }
         }
 
         public void Dispose()

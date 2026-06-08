@@ -5,6 +5,10 @@ namespace DataApiServiceForm.Models
 {
     public class IndicatorCategory
     {
+        public override string ToString()
+        {
+            return CategoryName ?? "";
+        }
         [JsonProperty("categoryId")]
         public int CategoryId { get; set; }
 

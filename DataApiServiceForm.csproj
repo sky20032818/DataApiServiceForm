@@ -75,8 +75,6 @@
     <Compile Include="Models\IndicatorCategory.cs" />
     <Compile Include="Models\IndicatorDef.cs" />
     <Compile Include="Models\IndicatorResult.cs" />
-    <Compile Include="Models\QueryRequest.cs" />
-    <Compile Include="Models\QueryResponse.cs" />
     <Compile Include="Services\IndicatorService.cs" />
     <Compile Include="Services\OracleQueryExecutor.cs" />
     <Compile Include="Services\ApiHttpServer.cs" />
